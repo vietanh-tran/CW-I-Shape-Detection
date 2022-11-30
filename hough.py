@@ -156,6 +156,7 @@ def displayHoughLines(image, houghspace, threshold):
 	for rho in range(houghspace.shape[0]):
 		for theta in range(houghspace.shape[1]):
 			if(houghspace[rho][theta] > threshold):
+				print(theta)
 				theta = np.radians(theta)
 				a = np.cos(theta)
 				b = np.sin(theta)
@@ -163,39 +164,26 @@ def displayHoughLines(image, houghspace, threshold):
 
 				# if vertical
 				if round(np.sin(theta)) == 0:
-					print("hello")
 					x_intercept = round(-c / a)
 					pt1 = (x_intercept, 0)
 					pt2 = (x_intercept, newImage.shape[0]-1)
 					
+				# if horizontal
+				elif round(np.cos(theta)) == 0:
+					y_intercept = round(-c / b)
+
+					pt1 = (0, y_intercept) 
+					pt2 = (newImage.shape[1]-1, y_intercept)
+
+				# all other cases
 				else:
-					# if horizontal
-					if round(np.cos(theta)) == 0:
-						y_intercept = round(-c / b)
-
-						pt1 = (0, y_intercept) 
-						pt2 = (newImage.shape[1]-1, y_intercept)
-
-					# all other cases
-					else:
-						pt1 = (0, 0)
-						pt2 = (0, 0)
+					m = (-1) * np.cos(theta) / np.sin(theta)
+					c = rho / np.sin(theta)			
+					pt1 = (0, round(0 * m + c))
+					pt2 = (newImage.shape[1]-1, round((newImage.shape[1]-1) * m + c))
 
 				newImage = cv2.line(newImage, pt1, pt2, (0, 255, 0), 1)
 
-				
-				# # sample two points
-				# pt1 = [0, int(0 * m + c)]
-				# pt2 = [2000, int(2000 * m + c)]			
-				# pt1[1] = max(pt1[1], 0)
-				# pt1[1] = min(pt1[1], newImage.shape[0])
-				# pt2[1] = max(pt2[1], 0)
-				# pt2[1] = min(pt2[1], newImage.shape[0])
-				# print(pt1, pt2, "\n")
-				
-				# draw
-
-	print("RETURNING")
 	return newImage
 
 if __name__ == "__main__":

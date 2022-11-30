@@ -6,16 +6,21 @@ import argparse
 import violaJones
 import hough
 
-# def getLineIntersection(line1, line2):
-#     m1, c1 = line1
-#     m2, c2 = line2
+def intersection(line1, line2):
+    rho1, theta1 = line1
+    rho2, theta2 = line2
 
+    A = np.array([
+        [np.cos(theta1), np.sin(theta1)],
+        [np.cos(theta2), np.sin(theta2)]
+    ])
 
+    b = np.array([[rho1], [rho2]])
+    x0, y0 = np.linalg.solve(A, b)
+    x0, y0 = int(np.round(x0)), int(np.round(y0))
+    return (x0, y0)
 
-#     return None
-
-
-# def getLineIntersections(lines):
+# def getLineIntersections(houghSpace):
 #     intersections = set()
 
 #     for idx, (m1, c1) in enumerate(lines):
@@ -108,18 +113,18 @@ if __name__ == "__main__":
         start_point = [x - delta, y - delta]
         end_point = [x + width + delta, y + height + delta]
 
+        # make sure to not go over the bounds of the image
         start_point[0] = max(start_point[0], 0)
         start_point[1] = max(start_point[1], 0)
         end_point[0] = min(end_point[0], frame.shape[1]-1)
         end_point[1] = min(end_point[1], frame.shape[0]-1)       
 
+        # creating the mini image that will contain a small section of the original image
         rows, cols = end_point[1] - start_point[1] + 1, end_point[0] - start_point[0] + 1
         mini = np.zeros((rows, cols, 3), np.uint8)
-
         for r in range(rows):
             for c in range(cols):
                 mini[r, c] = frame[r + start_point[1], c + start_point[0]]
-
 
         # blurring
         processing = cv2.GaussianBlur(mini, (5, 5), 2, 2)
@@ -131,15 +136,18 @@ if __name__ == "__main__":
         else:
             processing = processing.astype(np.float32)
 
+        
+        houghSpace = hough.houghLine(processing, 60, 0.01)
+        
+        # drawing lines
+        mini = hough.displayHoughLines(mini, houghSpace, 1)
 
-        output = hough.houghLine(processing, 60, 0.01)
-        mini = hough.displayHoughLines(mini, output, 1)
+        # pasting the mini section back onto the image
         for r in range(rows):
             for c in range(cols):
                 lines[r + start_point[1], c + start_point[0]] = mini[r, c]
 
         
-    print(len(predictions_set))
 
 
     cv2.imwrite( "lines.png", lines )
