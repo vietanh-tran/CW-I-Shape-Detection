@@ -129,9 +129,20 @@ if __name__ == "__main__":
 
         # detecting rectangles
         # obtain binary image
+        
         blur = cv2.GaussianBlur(mini, (5, 5), 2, 2)
         gray = cv2.cvtColor(blur,cv2.COLOR_BGR2GRAY)
-        thresh = cv2.adaptiveThreshold(gray,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,51,9)
+        adaptive = cv2.adaptiveThreshold(gray,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,51,9)
+
+        WHITE_MIN = np.array([0, 200, 0],np.uint8)
+        WHITE_MAX = np.array([180, 255, 255],np.uint8)
+        hls = cv2.cvtColor(blur, cv2.COLOR_BGR2HLS)        
+        white = cv2.inRange(hls, WHITE_MIN, WHITE_MAX)
+
+        canny = cv2.Canny(gray, 100, 200)
+
+        thresh = canny | white #adaptive #& white
+
 
         # fill rectangular contours
         cnts = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)        
@@ -171,3 +182,13 @@ if __name__ == "__main__":
     # once we found the bounding box, make sure that the circle centre is really within that bounding box
     # resize the bounding box depending on the size of the circle
     # at the end, all bounding boxes who have been found at step 2. will be drawn 
+
+
+
+
+# must not have rectangles in each circle
+# better have less false positives than more true positives
+
+
+# finding more true positives + reducing false negatives - hough circle, viola jones
+# less false positives - the many checks
