@@ -93,6 +93,7 @@ if __name__ == "__main__":
     # 	processing = processing.astype(np.float32)
 
     # applying violaJones
+
     model = violaJones.loadClassifier(cascade_name) # blur?
     #groundTruth_set = readGroundtruth('groundtruth.txt')
     predictions_set = violaJones.detect(frame, model)
@@ -126,21 +127,35 @@ if __name__ == "__main__":
             for c in range(cols):
                 mini[r, c] = frame[r + start_point[1], c + start_point[0]]
 
-        # blurring
-        processing = cv2.GaussianBlur(mini, (5, 5), 2, 2)
+        # detecting rectangles
+        # obtain binary image
+        blur = cv2.GaussianBlur(mini, (5, 5), 2, 2)
+        gray = cv2.cvtColor(blur,cv2.COLOR_BGR2GRAY)
+        thresh = cv2.adaptiveThreshold(gray,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,51,9)
 
-        # grayscale
-        if processing.shape[2] >= 3:
-            processing = cv2.cvtColor( processing, cv2.COLOR_BGR2GRAY )
-            processing = processing.astype(np.float32)
-        else:
-            processing = processing.astype(np.float32)
+        # fill rectangular contours
+        cnts = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)        
+        cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+        for c in cnts:
+            cv2.drawContours(thresh, [c], -1, (255,255,255), -1)
 
-        
-        houghSpace = hough.houghLine(processing, 60, 0.01)
-        
-        # drawing lines
-        mini = hough.displayHoughLines(mini, houghSpace, 1)
+        # perform morph open
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5,5))
+        opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
+
+        # draw rectangles
+        cnts = cv2.findContours(opening, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+        for c in cnts:
+            x,y,w,h = cv2.boundingRect(c)
+
+            if w > h*2 and w > mini.shape[1]/2 and w < mini.shape[1]: 
+                cv2.rectangle(mini, (x, y), (x + w, y + h), (255,0,0), 3)
+
+        # cv2.imshow('thresh', thresh)
+        # cv2.imshow('opening', opening)
+        # cv2.imshow('image', mini)
+        # cv2.waitKey()
 
         # pasting the mini section back onto the image
         for r in range(rows):
@@ -156,5 +171,3 @@ if __name__ == "__main__":
     # once we found the bounding box, make sure that the circle centre is really within that bounding box
     # resize the bounding box depending on the size of the circle
     # at the end, all bounding boxes who have been found at step 2. will be drawn 
-
-    

@@ -126,7 +126,8 @@ def displayHoughCircles(image, houghspace, threshold):
 def houghLine(input, threshold_mag, delta):
 	sobel_mag = sobelEdge_magnitude(input)
 	sobel_dir = sobelEdge_direction(input)
-	hough = np.zeros([int(np.ceil(np.sqrt(input.shape[0]**2 + input.shape[1]**2))) + 1, 360+1], dtype=np.float32) # ?
+	longest = int(np.ceil(np.sqrt(input.shape[0]**2 + input.shape[1]**2))) + 1
+	hough = np.zeros([longest, 360+1], dtype=np.float32) # ?
 	#hough = {}
 
 
