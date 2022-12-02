@@ -113,13 +113,18 @@ def houghCircle(input, threshold_mag, radMin, radMax):
 
 
 # Draw a circle at any point where the number in the hough space is larger than some threshold
-def displayHoughCircles(image, houghspace, threshold):
+def displayHoughCircles(image, houghspace):
     newImage = np.array(image)
-    for y in range(houghspace.shape[0]):
-        for x in range(houghspace.shape[1]):
-            for r in range(houghspace.shape[2]):
-                if(houghspace[y][x][r] > threshold):
-                    cv2.circle(newImage, (x,y), r, (0,255,0))
+
+    # for y in range(houghspace.shape[0]):
+    #     for x in range(houghspace.shape[1]):
+    #         for r in range(houghspace.shape[2]):
+    #             if(houghspace[y][x][r] > threshold):
+    #                 cv2.circle(newImage, (x,y), r, (0,255,0))
+
+    for (y, x) in houghspace.keys():
+    	r = houghspace[(y, x)]
+    	cv2.circle(newImage, (x,y), r, (0,255,0))
 
     return newImage
 

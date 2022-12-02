@@ -6,24 +6,6 @@ import argparse
 import violaJones
 import hough
 
-
-
-
-# def checkColours(image, x, y, width, height):
-#     start_point = (x, y)
-#     end_point = (x + width, y + height)
-
-#     red, white = 0, 0
-#     for row in range(start_point[1], end_point[1] + 1):
-#         for col in range(start_point[0], end_point[0] + 1):
-#             if is red:
-#                 red += 1
-#             elif is white:
-#                 white += 1
-
-#     return True or False depending on the proportion of red and white
-
-
 def hasMostlyRed(image, threshold):
     found = False
     newImage = np.array(image)
@@ -98,7 +80,44 @@ def hasRectangle(image):
             found = True
             cv2.rectangle(newImage, (x, y), (x + w, y + h), (255,0,0), 3)
 
+    # cv2.imshow('thresh', thresh)
+    # cv2.imshow('opening', opening)
+    # cv2.imshow('image', mini)
+    # cv2.waitKey()
+
     return found, newImage
+
+
+def removingDuplicateCircles(houghspace, delta, threshold):
+    newHough = {}
+
+    for y in range(houghspace.shape[0]):
+        for x in range(houghspace.shape[1]):
+            
+            can = True
+            for ty in range(y-delta, y+delta):
+                for tx in range(x-delta, x+delta):
+                    if (ty, tx) in newHough.keys():
+                        can = False
+
+            if can:
+                accum, count = 0.0, 0.0
+                for r in range(houghspace.shape[2]):
+                    if houghspace[y][x][r] > threshold:
+                        accum += r
+                        count += 1.0
+
+                if count:                    
+                    newHough[(y, x)] = round(accum / count) 
+                    
+    return newHough
+
+def getBoxFromCircle(x, y, r, delta):
+    new_y = max(y - r - delta, 0)
+    new_x = max(x - r - delta, 0)
+
+    width = heigth = r*2 + delta*2
+    return (new_x, new_y, width, height)
 
 
 
@@ -123,15 +142,15 @@ if __name__ == "__main__":
         print('Not image data')
         sys.exit(1)
 
-    # # blurring
-    # processing = cv2.GaussianBlur(frame, (5, 5), 2, 2)
+    # blurring
+    processing = cv2.GaussianBlur(frame.copy(), (5, 5), 2, 2)
 
-    # # grayscale
-    # if processing.shape[2] >= 3:
-    # 	processing = cv2.cvtColor( processing, cv2.COLOR_BGR2GRAY )
-    # 	processing = processing.astype(np.float32)
-    # else:
-    # 	processing = processing.astype(np.float32)
+    # grayscale
+    if processing.shape[2] >= 3:
+    	processing = cv2.cvtColor( processing, cv2.COLOR_BGR2GRAY )
+    	processing = processing.astype(np.float32)
+    else:
+    	processing = processing.astype(np.float32)
 
     # applying violaJones
 
@@ -144,9 +163,10 @@ if __name__ == "__main__":
     cv2.imwrite( "boxes.jpg", boxes )
 
     # applying hough
-    #output = hough.houghCircle(gray_image, 50, 10, 80)
-    #circles = hough.displayHoughCircles(frame, output, 10)
-    #cv2.imwrite( "circle.png", circles )
+    output = hough.houghCircle(processing, 40, 5, 100)
+    output = removingDuplicateCircles(output, 7, 10)
+    circles = hough.displayHoughCircles(frame, output)
+    cv2.imwrite( "circle.png", circles )
 
 
     delta = 0
@@ -170,11 +190,6 @@ if __name__ == "__main__":
 
         #found, mini = hasRectangle(mini)
         cond = hasMostlyRed(mini, 0.267)
-
-        # cv2.imshow('thresh', thresh)
-        # cv2.imshow('opening', opening)
-        # cv2.imshow('image', mini)
-        # cv2.waitKey()
 
         # pasting the mini section back onto the image
         for r in range(rows):
