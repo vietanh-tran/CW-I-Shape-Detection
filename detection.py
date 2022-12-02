@@ -24,6 +24,42 @@ import hough
 #     return True or False depending on the proportion of red and white
 
 
+def hasMostlyRed(image, threshold):
+    found = False
+    newImage = np.array(image)
+    img_hsv = cv2.cvtColor(newImage, cv2.COLOR_BGR2HSV)
+
+    # lower mask (0-10)
+    lower_red = np.array([0,50,50])
+    upper_red = np.array([5,255,255])
+    mask0 = cv2.inRange(img_hsv, lower_red, upper_red)
+
+    # upper mask (170-180)
+    lower_red = np.array([175,50,50])
+    upper_red = np.array([180,255,255])
+    mask1 = cv2.inRange(img_hsv, lower_red, upper_red)
+
+    # join my masks
+    mask = mask0 | mask1
+
+    # set my output img to zero everywhere except my mask
+    newImage[np.where(mask==0)] = 0
+    newImage = newImage[...,2]    
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5,5))
+    closing = cv2.morphologyEx(newImage, cv2.MORPH_CLOSE, kernel)
+
+    newImage[np.where(mask!=0)] = 1
+    pixels = np.sum(newImage)
+
+    val = pixels / (newImage.shape[0] * newImage.shape[1])
+
+    return val >= threshold
+
+    # newImage[np.where(newImage==1)] = 255
+    # print("pixels", pixels, newImage.shape[0] * newImage.shape[1], pixels / (newImage.shape[0] * newImage.shape[1]))    
+    # cv2.imshow('red', newImage)
+    # cv2.waitKey()
+
 def hasRectangle(image):
     found = False
     newImage = np.array(image)
@@ -132,7 +168,8 @@ if __name__ == "__main__":
             for c in range(cols):
                 mini[r, c] = frame[r + start_point[1], c + start_point[0]]
 
-        found, mini = hasRectangle(mini)
+        #found, mini = hasRectangle(mini)
+        cond = hasMostlyRed(mini, 0.267)
 
         # cv2.imshow('thresh', thresh)
         # cv2.imshow('opening', opening)
@@ -142,7 +179,10 @@ if __name__ == "__main__":
         # pasting the mini section back onto the image
         for r in range(rows):
             for c in range(cols):
-                lines[r + start_point[1], c + start_point[0]] = mini[r, c]
+                if cond:
+                    lines[r + start_point[1], c + start_point[0]] = mini[r, c]
+                else:
+                    lines[r + start_point[1], c + start_point[0]] = 0
 
         
     cv2.imwrite( "lines.png", lines )
@@ -161,3 +201,7 @@ if __name__ == "__main__":
 
 # finding more true positives + reducing false negatives - hough circle, viola jones
 # less false positives - the many checks
+
+
+# if viola is wrong but really close???
+# viola box in box
