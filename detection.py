@@ -132,7 +132,7 @@ if __name__ == "__main__":
         
         blur = cv2.GaussianBlur(mini, (5, 5), 2, 2)
         gray = cv2.cvtColor(blur,cv2.COLOR_BGR2GRAY)
-        adaptive = cv2.adaptiveThreshold(gray,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,51,9)
+        adaptive = cv2.adaptiveThreshold(gray,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,57,11)
 
         WHITE_MIN = np.array([0, 200, 0],np.uint8)
         WHITE_MAX = np.array([180, 255, 255],np.uint8)
@@ -141,7 +141,7 @@ if __name__ == "__main__":
 
         canny = cv2.Canny(gray, 100, 200)
 
-        thresh = canny | white #adaptive #& white
+        thresh = adaptive & (canny | white)
 
 
         # fill rectangular contours
