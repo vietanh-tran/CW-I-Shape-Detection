@@ -6,43 +6,7 @@ import argparse
 import violaJones
 import hough
 
-def intersection(line1, line2):
-    rho1, theta1 = line1
-    rho2, theta2 = line2
 
-    A = np.array([
-        [np.cos(theta1), np.sin(theta1)],
-        [np.cos(theta2), np.sin(theta2)]
-    ])
-
-    b = np.array([[rho1], [rho2]])
-    x0, y0 = np.linalg.solve(A, b)
-    x0, y0 = int(np.round(x0)), int(np.round(y0))
-    return (x0, y0)
-
-# def getLineIntersections(houghSpace):
-#     intersections = set()
-
-#     for idx, (m1, c1) in enumerate(lines):
-#         for (m2, c2) in lines[idx+1:]:
-#             i = getLineIntersection((m1, c1), (m2, c2))
-#             if i != None:
-#                 intersections.add(i)
-
-#     return intersections
-
-
-# def checkLineIntersections(x, y, width, height, intersections, mini, maxi):
-#     start_point = (x, y)
-#     end_point = (x + width, y + height)
-
-#     count = 0
-#     for (ix, iy) in intersections:
-#         if start_point[0] <= ix and ix <= end_point[0] and 
-#             start_point[1] <= iy and iy <= end_point[1]:
-#             count += 1
-
-#     return mini <= count and count <= maxi
 
 
 # def checkColours(image, x, y, width, height):
@@ -58,6 +22,47 @@ def intersection(line1, line2):
 #                 white += 1
 
 #     return True or False depending on the proportion of red and white
+
+
+def hasRectangle(image):
+    found = False
+    newImage = np.array(image)
+    
+    # obtain binary image        
+    blur = cv2.GaussianBlur(newImage, (5, 5), 2, 2)
+    gray = cv2.cvtColor(blur,cv2.COLOR_BGR2GRAY)
+    adaptive = cv2.adaptiveThreshold(gray,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,57,11)
+
+    WHITE_MIN = np.array([0, 200, 0],np.uint8)
+    WHITE_MAX = np.array([180, 255, 255],np.uint8)
+    hls = cv2.cvtColor(blur, cv2.COLOR_BGR2HLS)        
+    white = cv2.inRange(hls, WHITE_MIN, WHITE_MAX)
+
+    canny = cv2.Canny(gray, 100, 200)
+
+    thresh = adaptive & (canny | white)
+
+    # fill rectangular contours
+    cnts = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)        
+    cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+    for c in cnts:
+        cv2.drawContours(thresh, [c], -1, (255,255,255), -1)
+
+    # perform morph open
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5,5))
+    opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
+
+    # draw rectangles
+    cnts = cv2.findContours(opening, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+    for c in cnts:
+        x,y,w,h = cv2.boundingRect(c)
+
+        if w > h*2 and w > newImage.shape[1]/2 and w < newImage.shape[1]: 
+            found = True
+            cv2.rectangle(newImage, (x, y), (x + w, y + h), (255,0,0), 3)
+
+    return found, newImage
 
 
 
@@ -127,41 +132,7 @@ if __name__ == "__main__":
             for c in range(cols):
                 mini[r, c] = frame[r + start_point[1], c + start_point[0]]
 
-        # detecting rectangles
-        # obtain binary image
-        
-        blur = cv2.GaussianBlur(mini, (5, 5), 2, 2)
-        gray = cv2.cvtColor(blur,cv2.COLOR_BGR2GRAY)
-        adaptive = cv2.adaptiveThreshold(gray,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,57,11)
-
-        WHITE_MIN = np.array([0, 200, 0],np.uint8)
-        WHITE_MAX = np.array([180, 255, 255],np.uint8)
-        hls = cv2.cvtColor(blur, cv2.COLOR_BGR2HLS)        
-        white = cv2.inRange(hls, WHITE_MIN, WHITE_MAX)
-
-        canny = cv2.Canny(gray, 100, 200)
-
-        thresh = adaptive & (canny | white)
-
-
-        # fill rectangular contours
-        cnts = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)        
-        cnts = cnts[0] if len(cnts) == 2 else cnts[1]
-        for c in cnts:
-            cv2.drawContours(thresh, [c], -1, (255,255,255), -1)
-
-        # perform morph open
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5,5))
-        opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
-
-        # draw rectangles
-        cnts = cv2.findContours(opening, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        cnts = cnts[0] if len(cnts) == 2 else cnts[1]
-        for c in cnts:
-            x,y,w,h = cv2.boundingRect(c)
-
-            if w > h*2 and w > mini.shape[1]/2 and w < mini.shape[1]: 
-                cv2.rectangle(mini, (x, y), (x + w, y + h), (255,0,0), 3)
+        found, mini = hasRectangle(mini)
 
         # cv2.imshow('thresh', thresh)
         # cv2.imshow('opening', opening)
@@ -174,8 +145,6 @@ if __name__ == "__main__":
                 lines[r + start_point[1], c + start_point[0]] = mini[r, c]
 
         
-
-
     cv2.imwrite( "lines.png", lines )
 
     # for each hough circle, find the closest bounding box whose box centre is closest to its own circle centre
