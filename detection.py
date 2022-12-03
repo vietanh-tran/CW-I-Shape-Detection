@@ -7,17 +7,16 @@ import violaJones
 import hough
 
 def hasMostlyRed(image, threshold):
-    found = False
     newImage = np.array(image)
     img_hsv = cv2.cvtColor(newImage, cv2.COLOR_BGR2HSV)
 
     # lower mask (0-10)
     lower_red = np.array([0,50,50])
-    upper_red = np.array([25,255,255])
+    upper_red = np.array([5,255,255])
     mask0 = cv2.inRange(img_hsv, lower_red, upper_red)
 
     # upper mask (170-180)
-    lower_red = np.array([160,50,50])
+    lower_red = np.array([175,50,50])
     upper_red = np.array([180,255,255])
     mask1 = cv2.inRange(img_hsv, lower_red, upper_red)
 
@@ -25,27 +24,27 @@ def hasMostlyRed(image, threshold):
     mask = mask0 | mask1
 
     # set my output img to zero everywhere except my mask
-    newImage[np.where(mask==0)] = 255
+    newImage[np.where(mask==0)] = 0
+    
+    # obtain grayscale
+    newImage = newImage[...,2]    
+    
+    # close any gaps
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5,5))
+    closing = cv2.morphologyEx(newImage, cv2.MORPH_CLOSE, kernel)
+
+    newImage[np.where(mask!=0)] = 1
+    pixels = np.sum(newImage)
+
+    val = pixels / (newImage.shape[0] * newImage.shape[1])
+
+    newImage[np.where(newImage==1)] = 255
+    print("pixels", pixels, newImage.shape[0] * newImage.shape[1], val)    
     cv2.imshow('red', newImage)
     cv2.waitKey()
-    
-    return newImage
 
-    # newImage = newImage[...,2]    
-    # kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5,5))
-    # closing = cv2.morphologyEx(newImage, cv2.MORPH_CLOSE, kernel)
+    return val >= threshold
 
-    # newImage[np.where(mask!=0)] = 1
-    # pixels = np.sum(newImage)
-
-    # val = pixels / (newImage.shape[0] * newImage.shape[1])
-
-    # return val >= threshold
-
-    # newImage[np.where(newImage==1)] = 255
-    # print("pixels", pixels, newImage.shape[0] * newImage.shape[1], pixels / (newImage.shape[0] * newImage.shape[1]))    
-    # cv2.imshow('red', newImage)
-    # cv2.waitKey()
 
 def hasRectangle(image):
     found = False
@@ -184,10 +183,41 @@ if __name__ == "__main__":
     # read Input Image
     frame = cv2.imread(imageName, 1)
 
-    processing = hasMostlyRed(frame, 69)
+    # ignore if image is not array.
+    if not (type(frame) is np.ndarray):
+        print('Not image data')
+        sys.exit(1)
+
+    # [*] 1. viola jones + cascade classifier
+    pre_vj = np.array(frame)
+    img_hsv = cv2.cvtColor(pre_vj, cv2.COLOR_BGR2HSV)
+
+    # lower mask (0-10)
+    lower_red = np.array([0,50,50])
+    upper_red = np.array([25,255,255])
+    mask0 = cv2.inRange(img_hsv, lower_red, upper_red)
+    
+    # upper mask (170-180)
+    lower_red = np.array([160,50,50])
+    upper_red = np.array([180,255,255])
+    mask1 = cv2.inRange(img_hsv, lower_red, upper_red)
+
+    # join masks
+    mask = mask0 | mask1
+
+    # set my output img to white everywhere except my mask
+    pre_vj[np.where(mask==0)] = 255
+
+    model = violaJones.loadClassifier(cascade_name)
+    #groundTruth_set = readGroundtruth('groundtruth.txt')
+    predictions_set = violaJones.detect(pre_vj, model)
+    #frame = display(frame, groundTruth_set, (0, 0, 255))
+    boxes = violaJones.display(frame, predictions_set, (0, 255, 0))
+    #assess(groundTruth_set, predictions_set)
+    cv2.imwrite( "boxes.jpg", boxes )
 
 
-
+    # # [*] 2. hough circle + k-means clustering
     # Z = frame.reshape((-1,3))
     
     # # convert to np.float32
@@ -203,79 +233,58 @@ if __name__ == "__main__":
     # res = center[label.flatten()]
     # res2 = res.reshape((frame.shape))
 
+    # # grayscale
+    # gray = cv2.cvtColor( res2, cv2.COLOR_BGR2GRAY )
+
+    # # applying hough
+    # circles = hough.houghCircle(gray, 40, 10, 120)
+    # circles = removingDuplicateCircles(circles, 200, 10)
+    # circlesImg = hough.displayHoughCircles(frame, circles)
+    # cv2.imwrite( "circle" + idx + ".png", circlesImg )
+
+
     # cv2.imshow('res2',res2)
     # cv2.waitKey(0)
     # cv2.destroyAllWindows()
-
     # processing = res2
 
+    # [*] 3. Mostly red check - Colour Masking, Closing Morphology
+    # [*] 4. Has white rectangle check - Adaptive Thresholding, Finding Contours, Opening Morphology
 
-    # ignore if image is not array.
-    if not (type(frame) is np.ndarray):
-        print('Not image data')
-        sys.exit(1)
+    delta = 0
+    processing = np.array(frame)
+    for (x, y, width, height) in predictions_set:
+        start_point = [x - delta, y - delta]
+        end_point = [x + width + delta, y + height + delta]
 
-    # applying violaJones
+        # make sure to not go over the bounds of the image
+        start_point[0] = max(start_point[0], 0)
+        start_point[1] = max(start_point[1], 0)
+        end_point[0] = min(end_point[0], frame.shape[1]-1)
+        end_point[1] = min(end_point[1], frame.shape[0]-1)       
 
-    model = violaJones.loadClassifier(cascade_name) # blur?
-    #groundTruth_set = readGroundtruth('groundtruth.txt')
-    predictions_set = violaJones.detect(processing, model)
-    #frame = display(frame, groundTruth_set, (0, 0, 255))
-    boxes = violaJones.display(frame, predictions_set, (0, 255, 0))
-    #assess(groundTruth_set, predictions_set)
-    cv2.imwrite( "boxes.jpg", boxes )
+        # creating the mini image that will contain a small section of the original image
+        rows, cols = end_point[1] - start_point[1] + 1, end_point[0] - start_point[0] + 1
+        mini = np.zeros((rows, cols, 3), np.uint8)
+        for r in range(rows):
+            for c in range(cols):
+                mini[r, c] = frame[r + start_point[1], c + start_point[0]]
 
-    # grayscale
-    if processing.shape[2] >= 3:
-        processing = cv2.cvtColor( frame, cv2.COLOR_BGR2GRAY )
+        #found, mini = hasRectangle(mini)
+        cond = hasMostlyRed(mini, 0.3)
 
-
-    # # applying hough
-    # output = hough.houghCircle(processing, 40, 10, 120)
-    # output = removingDuplicateCircles(output, 200, 10)
-    # circles = hough.displayHoughCircles(frame, output)
-    # cv2.imwrite( "circle" + idx + ".png", circles )
-
-    # delta = 0
-    # lines = np.array(frame)
-    # for (x, y, width, height) in predictions_set:
-    #     start_point = [x - delta, y - delta]
-    #     end_point = [x + width + delta, y + height + delta]
-
-    #     # make sure to not go over the bounds of the image
-    #     start_point[0] = max(start_point[0], 0)
-    #     start_point[1] = max(start_point[1], 0)
-    #     end_point[0] = min(end_point[0], frame.shape[1]-1)
-    #     end_point[1] = min(end_point[1], frame.shape[0]-1)       
-
-    #     # creating the mini image that will contain a small section of the original image
-    #     rows, cols = end_point[1] - start_point[1] + 1, end_point[0] - start_point[0] + 1
-    #     mini = np.zeros((rows, cols, 3), np.uint8)
-    #     for r in range(rows):
-    #         for c in range(cols):
-    #             mini[r, c] = frame[r + start_point[1], c + start_point[0]]
-
-    #     #found, mini = hasRectangle(mini)
-    #     cond = hasMostlyRed(mini, 0.267)
-
-    #     # pasting the mini section back onto the image
-    #     for r in range(rows):
-    #         for c in range(cols):
-    #             if cond:
-    #                 lines[r + start_point[1], c + start_point[0]] = mini[r, c]
-    #             else:
-    #                 lines[r + start_point[1], c + start_point[0]] = 0
+        # pasting the mini section back onto the image
+        for r in range(rows):
+            for c in range(cols):
+                if cond:
+                    processing[r + start_point[1], c + start_point[0]] = mini[r, c]
+                else:
+                    processing[r + start_point[1], c + start_point[0]] = 0
 
         
-    # cv2.imwrite( "lines.png", lines )
+    # cv2.imwrite( "processing.png", processing )
 
-    # for each hough circle, find the closest bounding box whose box centre is closest to its own circle centre
-    # once we found the bounding box, make sure that the circle centre is really within that bounding box
-    # resize the bounding box depending on the size of the circle
-    # at the end, all bounding boxes who have been found at step 2. will be drawn 
-
-
-
+  
 
 # must not have rectangles in each circle
 # better have less false positives than more true positives
