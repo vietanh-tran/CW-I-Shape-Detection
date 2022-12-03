@@ -13,11 +13,11 @@ def hasMostlyRed(image, threshold):
 
     # lower mask (0-10)
     lower_red = np.array([0,50,50])
-    upper_red = np.array([5,255,255])
+    upper_red = np.array([25,255,255])
     mask0 = cv2.inRange(img_hsv, lower_red, upper_red)
 
     # upper mask (170-180)
-    lower_red = np.array([175,50,50])
+    lower_red = np.array([160,50,50])
     upper_red = np.array([180,255,255])
     mask1 = cv2.inRange(img_hsv, lower_red, upper_red)
 
@@ -25,7 +25,9 @@ def hasMostlyRed(image, threshold):
     mask = mask0 | mask1
 
     # set my output img to zero everywhere except my mask
-    newImage[np.where(mask==0)] = 0
+    newImage[np.where(mask==0)] = 255
+    cv2.imshow('red', newImage)
+    cv2.waitKey()
     
     return newImage
 
@@ -182,6 +184,10 @@ if __name__ == "__main__":
     # read Input Image
     frame = cv2.imread(imageName, 1)
 
+    processing = hasMostlyRed(frame, 69)
+
+
+
     # Z = frame.reshape((-1,3))
     
     # # convert to np.float32
@@ -189,7 +195,7 @@ if __name__ == "__main__":
     
     # # define criteria, number of clusters(K) and apply kmeans()
     # criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
-    # K = 4
+    # K = 7
     # ret,label,center=cv2.kmeans(Z,K,None,criteria,10,cv2.KMEANS_RANDOM_CENTERS)
     
     # # Now convert back into uint8, and make original image
@@ -203,27 +209,26 @@ if __name__ == "__main__":
 
     # processing = res2
 
-    processing = frame
-
 
     # ignore if image is not array.
     if not (type(frame) is np.ndarray):
         print('Not image data')
         sys.exit(1)
 
-    # grayscale
-    if processing.shape[2] >= 3:
-    	processing = cv2.cvtColor( frame, cv2.COLOR_BGR2GRAY )
-
     # applying violaJones
 
     model = violaJones.loadClassifier(cascade_name) # blur?
     #groundTruth_set = readGroundtruth('groundtruth.txt')
-    predictions_set = violaJones.detect(frame, model)
+    predictions_set = violaJones.detect(processing, model)
     #frame = display(frame, groundTruth_set, (0, 0, 255))
     boxes = violaJones.display(frame, predictions_set, (0, 255, 0))
     #assess(groundTruth_set, predictions_set)
     cv2.imwrite( "boxes.jpg", boxes )
+
+    # grayscale
+    if processing.shape[2] >= 3:
+        processing = cv2.cvtColor( frame, cv2.COLOR_BGR2GRAY )
+
 
     # # applying hough
     # output = hough.houghCircle(processing, 40, 10, 120)
