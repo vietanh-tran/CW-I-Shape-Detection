@@ -126,6 +126,42 @@ def getBoxFromCircle(x, y, r, delta):
     width = heigth = r*2 + delta*2
     return (new_x, new_y, width, height)
 
+def correspondenceBoxCircle(bx, by, width, height, cx, cy, circle_radius):
+    box_radius = (width + height) / 2.0
+
+    centreSimilarity = math.e ** (-np.linalg.norm(np.subtract(np.array([cx, cy]), np.array([bx, by]))))    
+    radiusSimilarity = math.e ** (-np.linalg.norm(np.subtract(np.array([circle_radius]), np.array([box_radius]))))
+    similarity = (centreSimilarity + radiusSimilarity) / 2.0
+
+    return similarity > 0.5
+
+def splitting(boxes, circles):
+    common = set()
+    removeBoxes, removeCircles = set(), set()
+    for (boxx, boxy, boxWidth, boxHeight) in boxes:
+        for (circley, circlex) in circles.keys():
+
+            if (circley, circlex) not in removeCircles:
+                circleRad =  circles[(circley, circlex)]
+                
+                if correspondenceBoxCircle(boxx, boxy, boxWidth, boxHeight, circlex, circley, circleRad):
+                    new_x = round((boxx + circlex) / 2.0)
+                    new_y = round((boxy + circley) / 2.0)
+                    newWidth = max(boxWidth, circleRad) # increase rad?? pre
+                    newHeight = max(boxHeight, circleRad)
+                    common.add(new_x, new_y, newWidth, newHeight)
+
+                    removeBoxes.add((boxx, boxy, boxWidth, boxHeight))
+                    removeCircles.add((circley, circlex))
+
+    for i in removeBoxes:
+        boxes.remove(i)
+
+    for i in removeCircles:
+        del circles[i]
+
+    return boxes, common, circles
+
 
 
 if __name__ == "__main__":
@@ -146,26 +182,28 @@ if __name__ == "__main__":
     # read Input Image
     frame = cv2.imread(imageName, 1)
 
-    Z = frame.reshape((-1,3))
+    # Z = frame.reshape((-1,3))
     
-    # convert to np.float32
-    Z = np.float32(Z)
+    # # convert to np.float32
+    # Z = np.float32(Z)
     
-    # define criteria, number of clusters(K) and apply kmeans()
-    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
-    K = 100
-    ret,label,center=cv2.kmeans(Z,K,None,criteria,10,cv2.KMEANS_RANDOM_CENTERS)
+    # # define criteria, number of clusters(K) and apply kmeans()
+    # criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+    # K = 4
+    # ret,label,center=cv2.kmeans(Z,K,None,criteria,10,cv2.KMEANS_RANDOM_CENTERS)
     
-    # Now convert back into uint8, and make original image
-    center = np.uint8(center)
-    res = center[label.flatten()]
-    res2 = res.reshape((frame.shape))
+    # # Now convert back into uint8, and make original image
+    # center = np.uint8(center)
+    # res = center[label.flatten()]
+    # res2 = res.reshape((frame.shape))
 
-    cv2.imshow('res2',res2)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    # cv2.imshow('res2',res2)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
 
-    processing = res2
+    # processing = res2
+
+    processing = frame
 
 
     # ignore if image is not array.
@@ -173,17 +211,9 @@ if __name__ == "__main__":
         print('Not image data')
         sys.exit(1)
 
-    # blurring
-    #processing = cv2.GaussianBlur(res2, (5, 5), 2, 2)
-
     # grayscale
     if processing.shape[2] >= 3:
-    	processing = cv2.cvtColor( res2, cv2.COLOR_BGR2GRAY )
-    	#processing = processing.astype(np.float32)
-    #else:
-    	#processing = processing.astype(np.float32)
-
-    #processing = cv2.Canny(processing, 100, 200)
+    	processing = cv2.cvtColor( frame, cv2.COLOR_BGR2GRAY )
 
     # applying violaJones
 
@@ -195,11 +225,11 @@ if __name__ == "__main__":
     #assess(groundTruth_set, predictions_set)
     cv2.imwrite( "boxes.jpg", boxes )
 
-    # applying hough
-    output = hough.houghCircle(processing, 40, 10, 120)
-    output = removingDuplicateCircles(output, 200, 10)
-    circles = hough.displayHoughCircles(frame, output)
-    cv2.imwrite( "circle" + idx + ".png", circles )
+    # # applying hough
+    # output = hough.houghCircle(processing, 40, 10, 120)
+    # output = removingDuplicateCircles(output, 200, 10)
+    # circles = hough.displayHoughCircles(frame, output)
+    # cv2.imwrite( "circle" + idx + ".png", circles )
 
     # delta = 0
     # lines = np.array(frame)
