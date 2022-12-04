@@ -128,6 +128,20 @@ def displayHoughCircles(image, houghspace):
 
     return newImage
 
+def displayHoughCircles(image, houghspace, threshold):
+    newImage = np.array(image)
+    for y in range(houghspace.shape[0]):
+        for x in range(houghspace.shape[1]):
+            for r in range(houghspace.shape[2]):
+                if(houghspace[y][x][r] > threshold):
+                    cv2.circle(newImage, (x,y), r, (0,255,0))
+                    return True, newImage
+
+    return False, newImage
+
+
+
+
 def houghLine(input, threshold_mag, delta):
 	sobel_mag = sobelEdge_magnitude(input)
 	sobel_dir = sobelEdge_direction(input)

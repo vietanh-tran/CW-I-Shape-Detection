@@ -12,7 +12,7 @@ def hasMostlyRed(image, threshold):
 
     # lower mask (0-10)
     lower_red = np.array([0,50,50])
-    upper_red = np.array([5,255,255])
+    upper_red = np.array([3,255,255])
     mask0 = cv2.inRange(img_hsv, lower_red, upper_red)
 
     # upper mask (170-180)
@@ -25,28 +25,27 @@ def hasMostlyRed(image, threshold):
 
     # set my output img to zero everywhere except my mask
     newImage[np.where(mask==0)] = 0
-    
+    newImage[np.where(mask!=0)] = 1
+
     # obtain grayscale
     newImage = newImage[...,2]    
     
     # close any gaps
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5,5))
     closing = cv2.morphologyEx(newImage, cv2.MORPH_CLOSE, kernel)
-
-    newImage[np.where(mask!=0)] = 1
+    
     pixels = np.sum(newImage)
-
     val = pixels / (newImage.shape[0] * newImage.shape[1])
 
-    newImage[np.where(newImage==1)] = 255
-    print("pixels", pixels, newImage.shape[0] * newImage.shape[1], val)    
-    cv2.imshow('red', newImage)
-    cv2.waitKey()
+    # newImage[np.where(newImage==1)] = 255
+    # print("pixels", pixels, newImage.shape[0] * newImage.shape[1], val)    
+    # cv2.imshow('red', newImage)
+    # cv2.waitKey()
 
     return val >= threshold
 
 
-def hasRectangle(image):
+def hasRectangle(image, threshold1, threshold2):
     found = False
     newImage = np.array(image)
     
@@ -79,14 +78,14 @@ def hasRectangle(image):
     cnts = cnts[0] if len(cnts) == 2 else cnts[1]
     for c in cnts:
         x,y,w,h = cv2.boundingRect(c)
-
-        if w > h*2 and w > newImage.shape[1]/2 and w < newImage.shape[1]: 
+        ratio = w*h / (newImage.shape[0]*newImage.shape[1])
+        if w > h*2 and threshold1 < ratio and ratio < threshold2: 
             found = True
             cv2.rectangle(newImage, (x, y), (x + w, y + h), (255,0,0), 3)
 
     # cv2.imshow('thresh', thresh)
     # cv2.imshow('opening', opening)
-    # cv2.imshow('image', mini)
+    # cv2.imshow('image', newImage)
     # cv2.waitKey()
 
     return found, newImage
@@ -217,42 +216,13 @@ if __name__ == "__main__":
     cv2.imwrite( "boxes.jpg", boxes )
 
 
-    # # [*] 2. hough circle + k-means clustering
-    # Z = frame.reshape((-1,3))
-    
-    # # convert to np.float32
-    # Z = np.float32(Z)
-    
-    # # define criteria, number of clusters(K) and apply kmeans()
-    # criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
-    # K = 7
-    # ret,label,center=cv2.kmeans(Z,K,None,criteria,10,cv2.KMEANS_RANDOM_CENTERS)
-    
-    # # Now convert back into uint8, and make original image
-    # center = np.uint8(center)
-    # res = center[label.flatten()]
-    # res2 = res.reshape((frame.shape))
-
-    # # grayscale
-    # gray = cv2.cvtColor( res2, cv2.COLOR_BGR2GRAY )
-
-    # # applying hough
-    # circles = hough.houghCircle(gray, 40, 10, 120)
-    # circles = removingDuplicateCircles(circles, 200, 10)
-    # circlesImg = hough.displayHoughCircles(frame, circles)
-    # cv2.imwrite( "circle" + idx + ".png", circlesImg )
-
-
-    # cv2.imshow('res2',res2)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
-    # processing = res2
-
     # [*] 3. Mostly red check - Colour Masking, Closing Morphology
     # [*] 4. Has white rectangle check - Adaptive Thresholding, Finding Contours, Opening Morphology
 
-    delta = 0
+    delta = 10
     processing = np.array(frame)
+    to_remove = set()
+
     for (x, y, width, height) in predictions_set:
         start_point = [x - delta, y - delta]
         end_point = [x + width + delta, y + height + delta]
@@ -270,29 +240,51 @@ if __name__ == "__main__":
             for c in range(cols):
                 mini[r, c] = frame[r + start_point[1], c + start_point[0]]
 
-        #found, mini = hasRectangle(mini)
-        cond = hasMostlyRed(mini, 0.3)
+        # Z = mini.reshape((-1,3))
+    
+        # # convert to np.float32
+        # Z = np.float32(Z)
+    
+        # # define criteria, number of clusters(K) and apply kmeans()
+        # criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+        # K = 4
+        # ret,label,center=cv2.kmeans(Z,K,None,criteria,10,cv2.KMEANS_RANDOM_CENTERS)
+    
+        # # Now convert back into uint8, and make original image
+        # center = np.uint8(center)
+        # res = center[label.flatten()]
+        # res2 = res.reshape((mini.shape))
+
+        # grayscale
+        gray = cv2.cvtColor( mini, cv2.COLOR_BGR2GRAY )
+
+        # applying hough
+        circles = hough.houghCircle(gray, 35, 18, 120)
+        cond3, circlesImg = hough.displayHoughCircles(mini, circles, 10) 
+        #cv2.imshow('circle', circlesImg)
+        #cv2.waitKey()
+
+
+
+        cond1 = hasMostlyRed(mini, 0.1)
+        cond2, mini = hasRectangle(mini, 0.1, 0.25)
+
+        if not(cond3 or (not cond3 and cond1 and cond2)):
+            to_remove.add((x, y, width, height))
 
         # pasting the mini section back onto the image
-        for r in range(rows):
-            for c in range(cols):
-                if cond:
-                    processing[r + start_point[1], c + start_point[0]] = mini[r, c]
-                else:
-                    processing[r + start_point[1], c + start_point[0]] = 0
+        # for r in range(rows):
+        #     for c in range(cols):
+        #         if cond:
+        #             processing[r + start_point[1], c + start_point[0]] = mini[r, c]
+        #         else:
+        #             processing[r + start_point[1], c + start_point[0]] = 0
 
         
-    # cv2.imwrite( "processing.png", processing )
 
+    for i in to_remove:
+        predictions_set.remove(i)
+
+    boxes = violaJones.display(frame, predictions_set, (0, 255, 0))
+    cv2.imwrite( "boxes.jpg", boxes )
   
-
-# must not have rectangles in each circle
-# better have less false positives than more true positives
-
-
-# finding more true positives + reducing false negatives - hough circle, viola jones
-# less false positives - the many checks
-
-
-# if viola is wrong but really close???
-# viola box in box
