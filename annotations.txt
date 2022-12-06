@@ -1,0 +1,16 @@
+/home/viethan/Documents/IPCV/CW-I-Shape-Detection/No_entry/NoEntry0.bmp 0
+/home/viethan/Documents/IPCV/CW-I-Shape-Detection/No_entry/NoEntry1.bmp 0
+/home/viethan/Documents/IPCV/CW-I-Shape-Detection/No_entry/NoEntry10.bmp 0
+/home/viethan/Documents/IPCV/CW-I-Shape-Detection/No_entry/NoEntry11.bmp 0
+/home/viethan/Documents/IPCV/CW-I-Shape-Detection/No_entry/NoEntry12.bmp 0
+/home/viethan/Documents/IPCV/CW-I-Shape-Detection/No_entry/NoEntry13.bmp 0
+/home/viethan/Documents/IPCV/CW-I-Shape-Detection/No_entry/NoEntry14.bmp 0
+/home/viethan/Documents/IPCV/CW-I-Shape-Detection/No_entry/NoEntry15.bmp 0
+/home/viethan/Documents/IPCV/CW-I-Shape-Detection/No_entry/NoEntry2.bmp 0
+/home/viethan/Documents/IPCV/CW-I-Shape-Detection/No_entry/NoEntry3.bmp 0
+/home/viethan/Documents/IPCV/CW-I-Shape-Detection/No_entry/NoEntry4.bmp 0
+/home/viethan/Documents/IPCV/CW-I-Shape-Detection/No_entry/NoEntry5.bmp 0
+/home/viethan/Documents/IPCV/CW-I-Shape-Detection/No_entry/NoEntry6.bmp 0
+/home/viethan/Documents/IPCV/CW-I-Shape-Detection/No_entry/NoEntry7.bmp 1 554 178 33 29
+/home/viethan/Documents/IPCV/CW-I-Shape-Detection/No_entry/NoEntry8.bmp 0
+/home/viethan/Documents/IPCV/CW-I-Shape-Detection/No_entry/NoEntry9.bmp 0

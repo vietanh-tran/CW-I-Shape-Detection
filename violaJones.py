@@ -56,7 +56,7 @@ def detect(frame, model):
 
     return predictions_set
 
-def readGroundtruth(filename='groundtruth.txt'):
+def readGroundtruth(filename, file):
     groundTruth_set = set()
 
     # read bounding boxes as ground truth
@@ -71,7 +71,7 @@ def readGroundtruth(filename='groundtruth.txt'):
             width = int(float(content_list[3]))
             height = int(float(content_list[4]))
 
-            if imageName.split("/")[-1].split(".")[0] == img_name:
+            if file == img_name:
                print("ground_truth", str(x)+' '+str(y)+' '+str(width)+' '+str(height))
                groundTruth_set.add((x, y, width, height))
 

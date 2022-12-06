@@ -76,6 +76,10 @@ def hasRectangle(image, threshold1, threshold2):
     # draw rectangles
     cnts = cv2.findContours(opening, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+
+    if len(cnts) > 1:
+        return False, newImage
+
     for c in cnts:
         x,y,w,h = cv2.boundingRect(c)
         ratio = w*h / (newImage.shape[0]*newImage.shape[1])
@@ -162,6 +166,26 @@ def splitting(boxes, circles):
 
     return boxes, common, circles
 
+def removeUselessBoxes(predictions_set):
+    predictions_list = list(predictions_set)
+    predictions_list.sort(key=lambda x: x[2] * x[3], reverse=True)
+    output = set()
+
+    for (x, y, width, height) in predictions_list:
+        nope = False
+        lasto = (x + width, y + height)
+
+        for (x1, y1, width1, height1) in output:
+            lasto1 = (x1 + width1, y1 + height1)
+
+            if x1 <= x and lasto[0] <= lasto1[0] and y1 <= y and lasto[1] <= lasto1[1]:
+                nope = True
+                break
+
+        if not nope:
+            output.add((x, y, width, height))
+
+    return output
 
 
 if __name__ == "__main__":
@@ -170,8 +194,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     imageName = args.name
-    idx = imageName[16:18]
-    print(idx)
     cascade_name = "cascade.xml"
 
     # ignore if no such file is present.
@@ -182,10 +204,14 @@ if __name__ == "__main__":
     # read Input Image
     frame = cv2.imread(imageName, 1)
 
+    imageName = imageName.split("/")[-1]
+
     # ignore if image is not array.
     if not (type(frame) is np.ndarray):
         print('Not image data')
         sys.exit(1)
+
+    print("\n\n" + imageName)
 
     # [*] 1. viola jones + cascade classifier
     pre_vj = np.array(frame)
@@ -208,12 +234,11 @@ if __name__ == "__main__":
     pre_vj[np.where(mask==0)] = 255
 
     model = violaJones.loadClassifier(cascade_name)
-    #groundTruth_set = readGroundtruth('groundtruth.txt')
     predictions_set = violaJones.detect(pre_vj, model)
-    #frame = display(frame, groundTruth_set, (0, 0, 255))
     boxes = violaJones.display(frame, predictions_set, (0, 255, 0))
-    #assess(groundTruth_set, predictions_set)
     cv2.imwrite( "boxes.jpg", boxes )
+
+    predictions_set = removeUselessBoxes(predictions_set)
 
 
     # [*] 3. Mostly red check - Colour Masking, Closing Morphology
@@ -259,7 +284,7 @@ if __name__ == "__main__":
         gray = cv2.cvtColor( mini, cv2.COLOR_BGR2GRAY )
 
         # applying hough
-        circles = hough.houghCircle(gray, 35, 18, 120)
+        circles = hough.houghCircle(gray, 35, 17, 120)
         cond3, circlesImg = hough.displayHoughCircles(mini, circles, 10) 
         #cv2.imshow('circle', circlesImg)
         #cv2.waitKey()
@@ -285,6 +310,10 @@ if __name__ == "__main__":
     for i in to_remove:
         predictions_set.remove(i)
 
-    boxes = violaJones.display(frame, predictions_set, (0, 255, 0))
+    groundTruth_set = violaJones.readGroundtruth('groundtruth.txt', imageName)
+    boxes = violaJones.display(frame, groundTruth_set, (0, 0, 255))
+    boxes = violaJones.display(boxes, predictions_set, (0, 255, 0))
+    violaJones.assess(groundTruth_set, predictions_set)
+    
     cv2.imwrite( "boxes.jpg", boxes )
   
