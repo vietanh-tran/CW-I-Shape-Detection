@@ -7,9 +7,8 @@ import math
 
 # LOADING THE IMAGE
 # Example usage: python houghCircle.py -n coins.png
-
-
 # ==================================================
+
 def convolution(input, kernel):
 	kernelRadiusX = round(( kernel.shape[0] - 1 ) / 2)
 	kernelRadiusY = round(( kernel.shape[1] - 1 ) / 2)
@@ -73,10 +72,6 @@ def sobelEdge_magnitude(input):
     sobel_y = sobel_y ** 2
     output = np.sqrt(sobel_x + sobel_y)
     normalisedOutput = ((output - output.min()) / (output.max()-output.min()) *255).astype(np.uint8)
-
-    # threshold = 50
-    # normalisedOutput[:] = (normalisedOutput[:] > threshold) * 255
-	
     return normalisedOutput
 
 def sobelEdge_direction(input):
@@ -111,16 +106,8 @@ def houghCircle(input, threshold_mag, radMin, radMax):
 
 	return hough
 
-
-# Draw a circle at any point where the number in the hough space is larger than some threshold
 def displayHoughCircles(image, houghspace):
     newImage = np.array(image)
-
-    # for y in range(houghspace.shape[0]):
-    #     for x in range(houghspace.shape[1]):
-    #         for r in range(houghspace.shape[2]):
-    #             if(houghspace[y][x][r] > threshold):
-    #                 cv2.circle(newImage, (x,y), r, (0,255,0))
 
     for (y, x) in houghspace.keys():
     	r = houghspace[(y, x)]
@@ -139,16 +126,11 @@ def displayHoughCircles(image, houghspace, threshold):
 
     return False, newImage
 
-
-
-
 def houghLine(input, threshold_mag, delta):
 	sobel_mag = sobelEdge_magnitude(input)
 	sobel_dir = sobelEdge_direction(input)
 	longest = int(np.ceil(np.sqrt(input.shape[0]**2 + input.shape[1]**2))) + 1
 	hough = np.zeros([longest, 360+1], dtype=np.float32) # ?
-	#hough = {}
-
 
 	for y in range(input.shape[0]):
 		for x in range(input.shape[1]):
@@ -159,12 +141,6 @@ def houghLine(input, threshold_mag, delta):
 					if sobel_dir[y, x] - delta <= theta and theta <= sobel_dir[y, x] + delta:
 						rho = x * np.cos(theta) + y * np.sin(theta)
 						
-						# if rho not in hough:
-						# 	hough[rho] = {}
-						# if theta not in hough[rho]:
-						# 	hough[rho][theta] = 0
-
-						#hough[rho][theta] += 1
 						hough[round(rho), round(np.degrees(theta))] += 1
 	
 	return hough

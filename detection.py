@@ -23,7 +23,7 @@ def hasMostlyRed(image, threshold):
     # join my masks
     mask = mask0 | mask1
 
-    # set my output img to zero everywhere except my mask
+    # set my output img to processero everywhere except my mask
     newImage[np.where(mask==0)] = 0
     newImage[np.where(mask!=0)] = 1
 
@@ -36,14 +36,7 @@ def hasMostlyRed(image, threshold):
     
     pixels = np.sum(newImage)
     val = pixels / (newImage.shape[0] * newImage.shape[1])
-
-    # newImage[np.where(newImage==1)] = 255
-    # print("pixels", pixels, newImage.shape[0] * newImage.shape[1], val)    
-    # cv2.imshow('red', newImage)
-    # cv2.waitKey()
-
     return val >= threshold
-
 
 def hasRectangle(image, threshold1, threshold2):
     found = False
@@ -87,11 +80,6 @@ def hasRectangle(image, threshold1, threshold2):
             found = True
             cv2.rectangle(newImage, (x, y), (x + w, y + h), (255,0,0), 3)
 
-    # cv2.imshow('thresh', thresh)
-    # cv2.imshow('opening', opening)
-    # cv2.imshow('image', newImage)
-    # cv2.waitKey()
-
     return found, newImage
 
 
@@ -119,8 +107,7 @@ def removingDuplicateCircles(houghspace, delta, threshold):
 
                 if count:                    
                     newHough[(y, x)] = round(accum / count) 
-            
-                    
+                          
     return newHough
 
 def getBoxFromCircle(x, y, r, delta):
@@ -136,35 +123,7 @@ def correspondenceBoxCircle(bx, by, width, height, cx, cy, circle_radius):
     centreSimilarity = math.e ** (-np.linalg.norm(np.subtract(np.array([cx, cy]), np.array([bx, by]))))    
     radiusSimilarity = math.e ** (-np.linalg.norm(np.subtract(np.array([circle_radius]), np.array([box_radius]))))
     similarity = (centreSimilarity + radiusSimilarity) / 2.0
-
     return similarity > 0.5
-
-def splitting(boxes, circles):
-    common = set()
-    removeBoxes, removeCircles = set(), set()
-    for (boxx, boxy, boxWidth, boxHeight) in boxes:
-        for (circley, circlex) in circles.keys():
-
-            if (circley, circlex) not in removeCircles:
-                circleRad =  circles[(circley, circlex)]
-                
-                if correspondenceBoxCircle(boxx, boxy, boxWidth, boxHeight, circlex, circley, circleRad):
-                    new_x = round((boxx + circlex) / 2.0)
-                    new_y = round((boxy + circley) / 2.0)
-                    newWidth = max(boxWidth, circleRad) # increase rad?? pre
-                    newHeight = max(boxHeight, circleRad)
-                    common.add(new_x, new_y, newWidth, newHeight)
-
-                    removeBoxes.add((boxx, boxy, boxWidth, boxHeight))
-                    removeCircles.add((circley, circlex))
-
-    for i in removeBoxes:
-        boxes.remove(i)
-
-    for i in removeCircles:
-        del circles[i]
-
-    return boxes, common, circles
 
 def removeUselessBoxes(predictions_set):
     predictions_list = list(predictions_set)
@@ -211,8 +170,6 @@ if __name__ == "__main__":
         print('Not image data')
         sys.exit(1)
 
-    print("\n\n" + imageName)
-
     # [*] 1. viola jones + cascade classifier
     pre_vj = np.array(frame)
     img_hsv = cv2.cvtColor(pre_vj, cv2.COLOR_BGR2HSV)
@@ -235,19 +192,11 @@ if __name__ == "__main__":
 
     model = violaJones.loadClassifier(cascade_name)
     predictions_set = violaJones.detect(pre_vj, model)
-    boxes = violaJones.display(frame, predictions_set, (0, 255, 0))
-    cv2.imwrite( "boxes.jpg", boxes )
-
     predictions_set = removeUselessBoxes(predictions_set)
 
-
-    # [*] 3. Mostly red check - Colour Masking, Closing Morphology
-    # [*] 4. Has white rectangle check - Adaptive Thresholding, Finding Contours, Opening Morphology
-
+    
     delta = 10
-    processing = np.array(frame)
     to_remove = set()
-
     for (x, y, width, height) in predictions_set:
         start_point = [x - delta, y - delta]
         end_point = [x + width + delta, y + height + delta]
@@ -260,22 +209,18 @@ if __name__ == "__main__":
 
         # creating the mini image that will contain a small section of the original image
         rows, cols = end_point[1] - start_point[1] + 1, end_point[0] - start_point[0] + 1
-        mini = np.zeros((rows, cols, 3), np.uint8)
+        mini = np.processeros((rows, cols, 3), np.uint8)
         for r in range(rows):
             for c in range(cols):
                 mini[r, c] = frame[r + start_point[1], c + start_point[0]]
 
-        # Z = mini.reshape((-1,3))
-    
-        # # convert to np.float32
-        # Z = np.float32(Z)
-    
-        # # define criteria, number of clusters(K) and apply kmeans()
+        # K-means (removed)
+
+        # process = mini.reshape((-1,3))
+        # process = np.float32(process)
         # criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
         # K = 4
-        # ret,label,center=cv2.kmeans(Z,K,None,criteria,10,cv2.KMEANS_RANDOM_CENTERS)
-    
-        # # Now convert back into uint8, and make original image
+        # ret,label,center=cv2.kmeans(process,K,None,criteria,10,cv2.KMEANS_RANDOM_CENTERS)
         # center = np.uint8(center)
         # res = center[label.flatten()]
         # res2 = res.reshape((mini.shape))
@@ -283,29 +228,18 @@ if __name__ == "__main__":
         # grayscale
         gray = cv2.cvtColor( mini, cv2.COLOR_BGR2GRAY )
 
-        # applying hough
+        # [*] 2. Applying Hough Circle
         circles = hough.houghCircle(gray, 35, 17, 120)
         cond3, circlesImg = hough.displayHoughCircles(mini, circles, 10) 
-        #cv2.imshow('circle', circlesImg)
-        #cv2.waitKey()
-
-
-
+ 
+        # [*] 3. Mostly red check - Colour Masking, Closing Morphology
         cond1 = hasMostlyRed(mini, 0.1)
+
+        # [*] 4. Has white rectangle check - Adaptive Thresholding, Finding Contours, Opening Morphology
         cond2, mini = hasRectangle(mini, 0.1, 0.25)
 
         if not(cond3 or (not cond3 and cond1 and cond2)):
             to_remove.add((x, y, width, height))
-
-        # pasting the mini section back onto the image
-        # for r in range(rows):
-        #     for c in range(cols):
-        #         if cond:
-        #             processing[r + start_point[1], c + start_point[0]] = mini[r, c]
-        #         else:
-        #             processing[r + start_point[1], c + start_point[0]] = 0
-
-        
 
     for i in to_remove:
         predictions_set.remove(i)
@@ -314,6 +248,4 @@ if __name__ == "__main__":
     boxes = violaJones.display(frame, groundTruth_set, (0, 0, 255))
     boxes = violaJones.display(boxes, predictions_set, (0, 255, 0))
     violaJones.assess(groundTruth_set, predictions_set)
-    
-    cv2.imwrite( "boxes.jpg", boxes )
-  
+    cv2.imwrite( "detected.jpg", boxes )

@@ -4,10 +4,6 @@ import os
 import sys
 import argparse
 
-# LOADING THE IMAGE
-# Example usage: python filter2d.py -n car1.png
-
-
 # ground_truth = [x, y, width, height]
 # prediction = [x, y, width, height]
 def iou(ground_truth, prediction):
