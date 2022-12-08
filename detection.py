@@ -163,8 +163,6 @@ if __name__ == "__main__":
     # read Input Image
     frame = cv2.imread(imageName, 1)
 
-    imageName = imageName.split("/")[-1]
-
     # ignore if image is not array.
     if not (type(frame) is np.ndarray):
         print('Not image data')
@@ -209,7 +207,7 @@ if __name__ == "__main__":
 
         # creating the mini image that will contain a small section of the original image
         rows, cols = end_point[1] - start_point[1] + 1, end_point[0] - start_point[0] + 1
-        mini = np.processeros((rows, cols, 3), np.uint8)
+        mini = np.zeros((rows, cols, 3), np.uint8)
         for r in range(rows):
             for c in range(cols):
                 mini[r, c] = frame[r + start_point[1], c + start_point[0]]
