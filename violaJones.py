@@ -121,8 +121,8 @@ def assess(groundTruth_set, predictions_set):
     print("False Negatives:", FN)
     print("False Positives:", FP)
 
-    TPR = TP / (TP + FN)
-    F_1 = TP / (TP + 1/2 * (FP + FN))
+    TPR = TP / (TP + FN) if TP + FN != 0 else 0
+    F_1 = TP / (TP + 1/2 * (FP + FN)) if (TP + 1/2 * (FP + FN)) != 0 else 0 
     print("True Positive Rate:", TPR)
     print("F_1 score:", F_1)
 

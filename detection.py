@@ -163,6 +163,8 @@ if __name__ == "__main__":
     # read Input Image
     frame = cv2.imread(imageName, 1)
 
+    imageName = imageName.split("/")[-1]
+
     # ignore if image is not array.
     if not (type(frame) is np.ndarray):
         print('Not image data')
@@ -213,7 +215,6 @@ if __name__ == "__main__":
                 mini[r, c] = frame[r + start_point[1], c + start_point[0]]
 
         # K-means (removed)
-
         # process = mini.reshape((-1,3))
         # process = np.float32(process)
         # criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
@@ -221,7 +222,7 @@ if __name__ == "__main__":
         # ret,label,center=cv2.kmeans(process,K,None,criteria,10,cv2.KMEANS_RANDOM_CENTERS)
         # center = np.uint8(center)
         # res = center[label.flatten()]
-        # res2 = res.reshape((mini.shape))
+        # mini = res.reshape((mini.shape))
 
         # grayscale
         gray = cv2.cvtColor( mini, cv2.COLOR_BGR2GRAY )
